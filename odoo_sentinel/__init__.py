@@ -11,6 +11,7 @@ import os
 import sys
 import textwrap
 import traceback
+import unicodedata
 
 from datetime import datetime
 from functools import reduce
@@ -87,6 +88,7 @@ class Sentinel(object):
         _ = language.gettext
 
         # Initialize window
+        self.normalize_unicode = False
         self.screen = stdscr
         self._set_screen_size()
 
@@ -104,6 +106,9 @@ class Sentinel(object):
             self.hardware_code = self._input_text(
                 _('Autoconfiguration failed !\nPlease enter terminal code'))
             self.scanner_check()
+
+        # Get the normalize_unicode parameter
+        self.normalize_unicode = self.oerp_call('normalize_unicode')[1]
 
         # Reinit colors with values configured in OpenERP
         self._reinit_colors()
@@ -220,6 +225,16 @@ class Sentinel(object):
         # Set background to 'error' colors
         if bgcolor:
             self.screen.bkgd(0, color)
+
+        # Normalize the text to remove special characters
+        # This is needed for some hardware that can't display non-ASCII data
+        if self.normalize_unicode:
+            text = unicodedata.normalize('NFKD', text)
+            text = ''.join([
+                char not in ('\r', '\n') and curses.ascii.unctrl(char) or char
+                # Convert the string to ASCII characters
+                for char in text.encode('ascii', 'ignore').decode('utf-8')
+            ])
 
         # Display the text
         if not scroll:
