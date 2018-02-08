@@ -57,6 +57,22 @@ class Sentinel(object):
         """
         Initialize the sentinel program
         """
+        # Replace global dummy lambda by the translations gettext method
+        # The install method of gettext doesn't replace the function if exists
+        global _
+
+        # Initialize translations
+        lang = self.connection.env.context.get('lang', I18N_DEFAULT)
+        gettext.install(I18N_DOMAIN)
+        try:
+            language = gettext.translation(
+                I18N_DOMAIN, I18N_DIR, languages=[lang])
+        except:
+            language = gettext.translation(
+                I18N_DOMAIN, I18N_DIR, languages=[I18N_DEFAULT])
+
+        _ = language.gettext
+
         if options.profile in odoorpc.ODOO.list(rc_file=options.config_file):
             # Try to autodetect an OdooRPC configuration
             self.connection = odoorpc.ODOO.load(options.profile)
@@ -70,21 +86,6 @@ class Sentinel(object):
         self.test_file = None
         if options.test_file:
             self.test_file = open(os.path.expanduser(options.test_file), 'r')
-
-        # Initialize translations
-        lang = self.connection.env.context.get('lang', I18N_DEFAULT)
-        gettext.install(I18N_DOMAIN)
-        try:
-            language = gettext.translation(
-                I18N_DOMAIN, I18N_DIR, languages=[lang])
-        except:
-            language = gettext.translation(
-                I18N_DOMAIN, I18N_DIR, languages=[I18N_DEFAULT])
-
-        # Replace global dummy lambda by the translations gettext method
-        # The install method of gettext doesn't replace the function if exists
-        global _
-        _ = language.gettext
 
         # Initialize window
         self.screen = stdscr
@@ -838,7 +839,7 @@ class Sentinel(object):
                 nb_lines, self.window_width - 1, curses.ACS_DARROW)
 
         # Diplays number of the selected entry
-        self._display(_('Selected : %d') % highlighted, y=self.window_height-1,
+        self._display(_('Selected : %d') % highlighted, y=self.window_height - 1,
                       color='info', modifier=curses.A_BOLD)
 
         # Set the cursor position
@@ -876,6 +877,7 @@ def main():
     args = parser.parse_args(sys.argv[1:])
 
     curses.wrapper(Sentinel, args)
+
 
 if __name__ == '__main__':
     main()
